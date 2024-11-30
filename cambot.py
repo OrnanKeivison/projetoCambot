@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
 
-def detectarCirculosImagem(video):
+def detectarVitimas(cam, janela = None):
     # Lê um quadro do vídeo
-    ret, frame = video.read()
+    ret, frame = cam.read()
 
     # Verifica se o vídeo foi lido corretamente
     if not ret:
@@ -17,14 +17,7 @@ def detectarCirculosImagem(video):
     img_blur = cv2.medianBlur(img_gray, 5)
 
     # Detecta círculos usando a Transformada de Hough
-    circles = cv2.HoughCircles(img_blur, 
-                               cv2.HOUGH_GRADIENT, 
-                               dp=1, 
-                               minDist=70, 
-                               param1=70, 
-                               param2=35, 
-                               minRadius=10, 
-                               maxRadius=0)
+    circles = cv2.HoughCircles(img_blur, cv2.HOUGH_GRADIENT, dp=1, minDist=70, param1=70, param2=35, minRadius=40, maxRadius=0)
 
     # Lista para armazenar os círculos detectados
     circulos_detectados = []
@@ -47,7 +40,7 @@ def detectarCirculosImagem(video):
             avg_v = np.mean(circle_region[:, :, 2])
 
             # Se a média do valor (V) for baixa, indica uma cor escura (preta)
-            if avg_v < 60:  # Limiar de intensidade para considerar "preto"
+            if avg_v < 70:  # Limiar de intensidade para considerar "preto"
                 cor_circulo = (0, 0, 255)  # Vermelho
             else:
                 cor_circulo = (0, 255, 0)  # Verde
@@ -60,8 +53,13 @@ def detectarCirculosImagem(video):
 
             # Adiciona as coordenadas à lista de círculos detectados
             circulos_detectados.append({"x": x, "y": y, "radius": radius, "cor": cor_circulo})
-
-    return circulos_detectados, frame
+    
+    
+    if not(janela == None):
+        cv2.imshow(janela, frame)
+    
+    
+    return circulos_detectados
 
 
 # Execução do script
@@ -69,23 +67,23 @@ def detectarCirculosImagem(video):
 # Inicializa a câmera
 cap = cv2.VideoCapture(0)
 
+cv2.namedWindow('Detecção de Círculos', cv2.WINDOW_NORMAL)
+
+
 # Loop para capturar e processar os quadros do vídeo
 while True:
     # Detecta círculos na imagem capturada
-    circulos, frame = detectarCirculosImagem(cap)
+    circulos= detectarVitimas(cap, 'Detecção de Círculos')
 
     # Exibe a imagem com os círculos detectados
-    cv2.imshow('Detecção de Círculos', frame)
-
-    # Exibe as coordenadas dos círculos detectados (opcional)
     if circulos:
+        print(len(circulos))
         for circulo in circulos:
-            print(f"Círculo detectado: {circulo}")
+            print(f"circulo detectado:{circulo}")
+
+
 
     # Verifica se a tecla 'q' foi pressionada para sair
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) == 27:
         break
 
-# Libera os recursos da câmera e fecha as janelas
-cap.release()
-cv2.destroyAllWindows()
