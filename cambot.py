@@ -4,7 +4,7 @@ import serial
 import json
 import time
 
-def detectarVitimas(cam, janela = None):
+def detectarVitimas(cam):
     # Lê um quadro do vídeo
     ret, frame = cam.read()
 
@@ -22,7 +22,7 @@ def detectarVitimas(cam, janela = None):
     # Detecta círculos usando a Transformada de Hough
     circles = cv2.HoughCircles(img_blur, cv2.HOUGH_GRADIENT, dp=1, minDist=70, param1=70, param2=35, minRadius=40, maxRadius=0)
     
-    circuloDetectado = {}
+    circuloDetectado = {"x": 0, "y": 0, "r": 0, "s": " "}
     # Verifica se algum círculo foi detectado
     if circles is not None:
         circles = np.uint16(np.around(circles))
@@ -43,25 +43,12 @@ def detectarVitimas(cam, janela = None):
 
         # Se a média do valor (V) for baixa, indica uma cor escura (preta)
         if avg_v < 70:  # Limiar de intensidade para considerar "preto"
-            cor_circulo = (0, 0, 255)  # Vermelho
             status = 'dead'
         else:
-            cor_circulo = (0, 255, 0)  # Verde
             status = 'alive'
 
-        # Desenha o círculo em volta da esfera
-        cv2.circle(frame, (x, y), radius, cor_circulo, 2)  # Círculo em torno da esfera
-
-        # Marca o centro da esfera
-        cv2.circle(frame, (x, y), 2, (0, 0, 255), 3)
-
         # Adiciona as coordenadas à lista de círculos detectados
-        circuloDetectado = {"x": int(x), "y": int(y), "r": int(radius), "s": status}
-    
-    
-    # Se houver janela para mostrar os resultados
-    if not(janela == None):
-        cv2.imshow(janela, frame)
+        circuloDetectado = {"x": int(((x-320)*5)/16), "y": int(y), "r": int(radius), "s": status}
 
     return circuloDetectado
 
@@ -79,8 +66,6 @@ def enviarIno(circulo, ser):
 
 # Inicializa a câmera
 cap = cv2.VideoCapture(0)
-# Inicializa a janela
-cv2.namedWindow('Detecção de Círculos', cv2.WINDOW_NORMAL)
 # Inicializa a porta serial
 ser = serial.Serial('/dev/ttyUSB0', 9600)
 time.sleep(2)
@@ -94,14 +79,10 @@ while True:
     if mensagem == 'get':
         
         # Detecta círculos na imagem capturada
-        circulo = detectarVitimas(cap, 'Detecção de Círculos')
+        circulo = detectarVitimas(cap)
         
         # Exibe a imagem com os círculos detectados
         if circulo:
             print(f"raspy: {circulo}")
             enviarIno(circulo, ser)
-
-        # Verifica se a tecla 'q' foi pressionada para sair
-        if cv2.waitKey(1) == 27:
-            break
 
