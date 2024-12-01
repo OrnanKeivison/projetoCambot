@@ -56,37 +56,52 @@ def detectarVitimas(cam, janela = None):
         cv2.circle(frame, (x, y), 2, (0, 0, 255), 3)
 
         # Adiciona as coordenadas à lista de círculos detectados
-        circuloDetectado = {"x": x, "y": y, "r": radius, "s": status}
+        circuloDetectado = {"x": int(x), "y": int(y), "r": int(radius), "s": status}
     
     
     # Se houver janela para mostrar os resultados
     if not(janela == None):
         cv2.imshow(janela, frame)
-    
-    
+
     return circuloDetectado
+
+
+#função para envio de dados para o arduino
+def enviarIno(circulo, ser):
+    vitima = json.dumps(circulo)
+    
+    
+    ser.write(vitima.encode('utf-8'))
+
 
 
 # Execução do script
 
 # Inicializa a câmera
 cap = cv2.VideoCapture(0)
-
+# Inicializa a janela
 cv2.namedWindow('Detecção de Círculos', cv2.WINDOW_NORMAL)
+# Inicializa a porta serial
+ser = serial.Serial('/dev/ttyUSB0', 9600)
+time.sleep(2)
 
 
 # Loop para capturar e processar os quadros do vídeo
 while True:
-    # Detecta círculos na imagem capturada
-    circulo = detectarVitimas(cap, 'Detecção de Círculos')
+    mensagem = ser.readline().decode('utf-8').strip()
+    print(mensagem)
+    
+    if mensagem == 'get':
+        
+        # Detecta círculos na imagem capturada
+        circulo = detectarVitimas(cap, 'Detecção de Círculos')
+        
+        # Exibe a imagem com os círculos detectados
+        if circulo:
+            print(f"raspy: {circulo}")
+            enviarIno(circulo, ser)
 
-    # Exibe a imagem com os círculos detectados
-    if circulo:
-        print(f"circulo detectado:{circulo}")
-
-
-
-    # Verifica se a tecla 'q' foi pressionada para sair
-    if cv2.waitKey(1) == 27:
-        break
+        # Verifica se a tecla 'q' foi pressionada para sair
+        if cv2.waitKey(1) == 27:
+            break
 
